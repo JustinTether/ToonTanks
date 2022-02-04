@@ -122,8 +122,11 @@ protected:
 
 	void RotateTurret(float LookAt);
 
-	UFUNCTION(Server, reliable)
+	UFUNCTION()
 	void AdjustProjectileSpeed(float DesiredAdjustment);
+
+	UFUNCTION(Server, reliable)
+	void AdjustProjectileSpeed_Server(float DesiredAdjustment);
 
 private:
 	/*Camera component and springarm component*/

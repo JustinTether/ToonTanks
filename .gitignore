@@ -1,6 +1,9 @@
 # Visual Studio 2015 user specific files
 .vs/
 
+# Files saved by UE 'Live Coding'
+.enc_temp_folder/
+
 # Compiled Object files
 *.slo
 *.lo

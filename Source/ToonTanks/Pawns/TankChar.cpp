@@ -44,7 +44,7 @@ ATankChar::ATankChar()
 
 	//Projectile spawn point, self explanatory
 	ProjectileSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Tank Projectile Spawn Point"));
-	//ProjectileSpawnPoint->SetupAttachment(TurretMesh, FName(TEXT("ProjectileSpawnSocket")));
+	ProjectileSpawnPoint->SetupAttachment(TurretMesh);
 
 	//Camera and springarm creation
 	CameraSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Spring Arm"));
@@ -80,7 +80,7 @@ void ATankChar::BeginPlay()
 	Super::BeginPlay();
 	TankController = Cast<APlayerController>(GetWorld()->GetFirstPlayerController());
 	FAttachmentTransformRules newAttachRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, false);
-	ProjectileSpawnPoint->AttachToComponent(TurretMesh, newAttachRules, FName(TEXT("ProjectileSpawnSocket")));
+	//ProjectileSpawnPoint->AttachToComponent(TurretMesh, newAttachRules, FName(TEXT("ProjectileSpawnSocket")));
 }
 
 // Called every frame
@@ -189,10 +189,24 @@ void ATankChar::ResetFireDelay()
 	bCanFire = true;
 }
 
-void ATankChar::AdjustProjectileSpeed_Implementation(float DesiredAdjustment)
+void ATankChar::AdjustProjectileSpeed(float DesiredAdjustment)
 {
-	float AdjustedInput = (DesiredAdjustment * 100);
-	ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
+	if (IsLocallyControlled() || GetLocalRole() == ROLE_Authority)
+	{
+		float AdjustedInput = (DesiredAdjustment * 100);
+		ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
+		AdjustProjectileSpeed_Server(DesiredAdjustment);
+	}
+
+}
+
+void ATankChar::AdjustProjectileSpeed_Server_Implementation(float DesiredAdjustment)
+{
+	if (!IsLocallyControlled())
+	{
+		float AdjustedInput = (DesiredAdjustment * 100);
+		ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
+	}
 }
 
 void ATankChar::Fire()
@@ -202,16 +216,17 @@ void ATankChar::Fire()
 		//Spawn a projectile at ProjectileSpawnPoint location and Rotation with momentum towards Rotation Vector
 		if (ProjectileClass && bCanFire)
 		{
-			FTransform ProjectileSpawnTransform(ProjectileSpawnPoint->GetRelativeRotation(), ProjectileSpawnPoint->GetComponentLocation());
+			FTransform ProjectileSpawnTransform(ProjectileSpawnPoint->GetComponentRotation(), ProjectileSpawnPoint->GetComponentLocation());
 			auto CustomProjectile = Cast<AProjectileBase>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, ProjectileSpawnTransform));
 			if (!IsValid(CustomProjectile))
 			{
 				UE_LOG(LogTemp, Error, TEXT("Unable to spawn deferred actor"));
 				return;
 			}
-			UE_LOG(LogTemp, Error, TEXT("Current ProjectileAimPosition %s"), *ProjectileAimPosition.ToString());
-			ProjectileSpawnPoint->GetForwardVector();
 			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->InitialSpeed = ProjectileSpeed;
+
+			//@TODO Please replace this hardcoded vector with one that has it's Y element changed
+			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->SetVelocityInLocalSpace(FVector(1, 0, 0));
 			UGameplayStatics::FinishSpawningActor(CustomProjectile, ProjectileSpawnTransform);
 			CustomProjectile->SetOwner(this);
 			Fire_Server();
@@ -227,15 +242,15 @@ void ATankChar::Fire_Server_Implementation()
 		//Spawn a projectile at ProjectileSpawnPoint location and Rotation with momentum towards Rotation Vector
 		if (ProjectileClass)
 		{
-			FTransform ProjectileSpawnTransform(ProjectileSpawnPoint->GetRelativeRotation(), ProjectileSpawnPoint->GetComponentLocation());
+			FTransform ProjectileSpawnTransform(ProjectileSpawnPoint->GetComponentRotation(), ProjectileSpawnPoint->GetComponentLocation());
 			auto CustomProjectile = Cast<AProjectileBase>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, ProjectileSpawnTransform));
 			if (!IsValid(CustomProjectile))
 			{
 				UE_LOG(LogTemp, Error, TEXT("Unable to spawn deferred actor"));
 				return;
 			}
-			UE_LOG(LogTemp, Error, TEXT("[SERVER] Current ProjectileAimPosition %s"), *ProjectileAimPosition.ToString());
 			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->InitialSpeed = ProjectileSpeed;
+			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->SetVelocityInLocalSpace(FVector(1, 0, 0));
 			UGameplayStatics::FinishSpawningActor(CustomProjectile, ProjectileSpawnTransform);
 			CustomProjectile->SetOwner(this);
 		}
