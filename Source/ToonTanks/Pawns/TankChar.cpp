@@ -60,6 +60,9 @@ ATankChar::ATankChar()
 	MinProjectileSpeed = 400.f;
 	MaxProjectileSpeed = 5000.f;
 	ProjectileSpeed = MinProjectileSpeed;
+	MinVerticalAim = -20.0f;
+	MaxVerticalAim = 20.0f;
+	MouseVerticalOffset = 0;
 
 	//SetRole(ROLE_Authority);
 }
@@ -71,6 +74,7 @@ void ATankChar::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ATankChar, PlayerRotation);
 	DOREPLIFETIME(ATankChar, TankTeam);
 	DOREPLIFETIME(ATankChar, ProjectileSpeed);
+	DOREPLIFETIME(ATankChar, MouseVerticalOffset);
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 }
@@ -106,8 +110,7 @@ void ATankChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ATankChar::Fire);
 	PlayerInputComponent->BindAxis("RotateTurret", this, &ATankChar::GetTurretRotation);
 	PlayerInputComponent->BindAxis("ProjectilePower", this, &ATankChar::AdjustProjectileSpeed);
-	//PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ATankChar::LaunchPlayer);
-	//PlayerInputComponent->BindAction("Jump", IE_Released, this, &ATankPawn::StopJump); //TODO: Come back to this if/when physics works
+	PlayerInputComponent->BindAxis("VerticalAim", this, &ATankChar::GetMouseVerticalAim);
 }
 
 void ATankChar::RotateTurret(float LookAt)
@@ -120,6 +123,12 @@ void ATankChar::RotateTurret(float LookAt)
 		RotateTurret_Server(LookAt);
 		
 	}
+}
+
+void ATankChar::GetMouseVerticalAim(float MouseY)
+{
+	MouseVerticalOffset += MouseY * TurnSpeed * GetWorld()->DeltaTimeSeconds;
+	MouseVerticalOffset = FMath::Clamp(MouseVerticalOffset, MinVerticalAim, MaxVerticalAim);
 }
 
 void ATankChar::GetMoveDirection(float MoveInput)
@@ -216,7 +225,11 @@ void ATankChar::Fire()
 		//Spawn a projectile at ProjectileSpawnPoint location and Rotation with momentum towards Rotation Vector
 		if (ProjectileClass && bCanFire)
 		{
-			FTransform ProjectileSpawnTransform(ProjectileSpawnPoint->GetComponentRotation(), ProjectileSpawnPoint->GetComponentLocation());
+			//Create a new rot with altered Y? to see if the bullet fires higher
+			FRotator ProjectileRotator = ProjectileSpawnPoint->GetComponentRotation();
+			ProjectileRotator.Pitch += MouseVerticalOffset;
+
+			FTransform ProjectileSpawnTransform(ProjectileRotator, ProjectileSpawnPoint->GetComponentLocation());
 			auto CustomProjectile = Cast<AProjectileBase>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, ProjectileSpawnTransform));
 			if (!IsValid(CustomProjectile))
 			{
@@ -242,6 +255,9 @@ void ATankChar::Fire_Server_Implementation()
 		//Spawn a projectile at ProjectileSpawnPoint location and Rotation with momentum towards Rotation Vector
 		if (ProjectileClass)
 		{
+			FRotator ProjectileRotator = ProjectileSpawnPoint->GetComponentRotation();
+			ProjectileRotator.Pitch += MouseVerticalOffset;
+
 			FTransform ProjectileSpawnTransform(ProjectileSpawnPoint->GetComponentRotation(), ProjectileSpawnPoint->GetComponentLocation());
 			auto CustomProjectile = Cast<AProjectileBase>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, ProjectileSpawnTransform));
 			if (!IsValid(CustomProjectile))
