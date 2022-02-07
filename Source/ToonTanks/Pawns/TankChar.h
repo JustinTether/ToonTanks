@@ -88,6 +88,8 @@ public:
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_TankTeam)
 	int TankTeam;
 
+	/* Aiming */
+
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Turret")
 	float ProjectileSpeed;
 
@@ -97,8 +99,17 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Turret")
 	float MaxProjectileSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turret")
+	UPROPERTY(EditAnywhere, Category = "Aim")
+	float MinVerticalAim;
+
+	UPROPERTY(EditAnywhere, Category = "Aim")
+	float MaxVerticalAim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Aim")
 	FVector ProjectileAimPosition;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Aim")
+	float MouseVerticalOffset;
 
 	/*Constructor*/
 	ATankChar();
@@ -148,6 +159,7 @@ private:
 
 	void GetMoveDirection(float MoveInput); //Calculate move vector
 	void GetMoveRotation(float RotationInput); //Calculate rotation Quat from axis
+	void GetMouseVerticalAim(float MouseY);
 
 	void MovePlayer();
 
