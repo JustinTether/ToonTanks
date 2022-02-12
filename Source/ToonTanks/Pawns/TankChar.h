@@ -3,7 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ToonTanks/ToonTanks.h"
 #include "GameFramework/Character.h"
+#include "AbilitySystemInterface.h"
+#include "ToonTanks/Attributes/TTAttributeSet.h"
+#include "ToonTanks/Abilities/TTGameplayAbility.h"
+#include <GameplayEffectTypes.h>
 #include "TankChar.generated.h"
 
 class UCapsuleComponent;
@@ -16,9 +21,10 @@ class UPointLightComponent;
 class ATTPlayerController;
 class UMaterialInstanceDynamic;
 class UMaterialInstance;
+class UTTAbilitySystemComponent;
 
 UCLASS()
-class TOONTANKS_API ATankChar : public ACharacter
+class TOONTANKS_API ATankChar : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -29,21 +35,19 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	virtual void OnRep_PlayerState() override;
 
 
 
 public:
 	// Sets default values for this pawn's properties
 
-	/*Textures for choosing/setting team colours*/
-	UPROPERTY(EditAnywhere, Category = "Team Textures")
-	UTexture* RedTeamTexture;
+	/*Ability System*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
+	UTTAbilitySystemComponent* AbilitySystemComponent;
 
-	UPROPERTY(EditAnywhere, Category = "Team Textures")
-	UTexture* BlueTeamTexture;
-
-	UPROPERTY(EditAnywhere, Category = "Team Textures")
-	UMaterialInterface* TankMaterial;
+	UTTAttributeSet* Attributes;
 
 	/*Turret mesh, base mesh components*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "True"))
@@ -59,6 +63,17 @@ public:
 	UPROPERTY(Replicated)
 	FVector MovementDirection;
 
+	/*Textures for choosing/setting team colours*/
+	UPROPERTY(EditAnywhere, Category = "Team Textures")
+	UTexture* RedTeamTexture;
+
+	UPROPERTY(EditAnywhere, Category = "Team Textures")
+	UTexture* BlueTeamTexture;
+
+	UPROPERTY(EditAnywhere, Category = "Team Textures")
+	UMaterialInterface* TankMaterial;
+
+
 	float MouseFloat = 0.f;
 
 	//Turret Firing Delay
@@ -67,29 +82,16 @@ public:
 
 	bool bCanFire = true;
 
-	UFUNCTION()
-	void SetFireDelay();
-
-	UFUNCTION()
-	void ResetFireDelay();
-
 	//Some editor values for turn/movement speed as it's more feel based than anything
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "True"))
 	float MoveSpeed = 300.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "True"))
 	float TurnSpeed = 100.f;
 
-	UFUNCTION(NetMulticast, Reliable)
-	void SetTeamColour_Server(int Team);
-
-	UFUNCTION()
-	void OnRep_TankTeam();
-
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_TankTeam)
 	int TankTeam;
 
 	/* Aiming */
-
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Turret")
 	float ProjectileSpeed;
 
@@ -111,8 +113,21 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Aim")
 	float MouseVerticalOffset;
 
-	/*Constructor*/
+	/*Functions*/
 	ATankChar();
+
+	UFUNCTION()
+	void SetFireDelay();
+
+	UFUNCTION()
+	void ResetFireDelay();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void SetTeamColour_Server(int Team);
+
+	UFUNCTION()
+	void OnRep_TankTeam();
+
 protected:
 
 	/*Projectile class, and projectile spawn point component*/
@@ -139,17 +154,26 @@ protected:
 	UFUNCTION(Server, reliable)
 	void AdjustProjectileSpeed_Server(float DesiredAdjustment);
 
+	/* GameplayAbilities */
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Abilities")
+	TSubclassOf<class UGameplayEffect> DefaultAttributeEffect;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Abilities")
+	TArray<TSubclassOf<UTTGameplayAbility>> DefaultAbilities;
+
 private:
 	/*Camera component and springarm component*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "True"))
 	UCameraComponent* PlayerCamera = nullptr;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "True"))
 	USpringArmComponent* CameraSpringArm = nullptr;
 
-
 	APlayerController* TankController = nullptr;
 
-private:
+	/* GameplayAbilities Functions */
+	virtual void InitializeAttributes();
+	virtual void GiveAbilities();
 
 	UPROPERTY(Replicated)
 	FRotator PlayerRotation;

@@ -1,25 +1,28 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
+//Project Includes
 #include "TankChar.h"
+#include "ToonTanks/Actors/ProjectileBase.h"
+#include "ToonTanks/Controllers/TTPlayerController.h"
+#include "ToonTanks/Components/TTAbilitySystemComponent.h"
+#include "ToonTanks/Abilities/TTGameplayAbility.h"
+
+//UE Includes
 #include "Components/SceneComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "../Actors/ProjectileBase.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
-#include "../Controllers/TTPlayerController.h"
 #include "Net/UnrealNetwork.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/PlayerController.h"
 #include "TimerManager.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-
 
 
 // Sets default values
@@ -53,6 +56,12 @@ ATankChar::ATankChar()
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Player Controlled Camera"));
 	PlayerCamera->SetupAttachment(CameraSpringArm);
 
+	AbilitySystemComponent = CreateDefaultSubobject<UTTAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+
+	Attributes = CreateDefaultSubobject<UTTAttributeSet>(TEXT("Ability Attributes"));
+
 	bReplicates = true;
 
 	TankTeam = -1;
@@ -77,6 +86,65 @@ void ATankChar::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ATankChar, MouseVerticalOffset);
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+}
+
+void ATankChar::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
+	InitializeAttributes();
+	GiveAbilities();
+}
+
+void ATankChar::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	InitializeAttributes();
+
+	//Bind inputs for abilities
+	if (AbilitySystemComponent && InputComponent)
+	{
+		const FGameplayAbilityInputBinds Binds("Confirm", "Cancel", "TTAbilityInputID", static_cast<int32>(TTAbilityInputID::Confirm), static_cast<int32>(TTAbilityInputID::Cancel));
+		AbilitySystemComponent->BindAbilityActivationToInputComponent(InputComponent, Binds);
+	}
+}
+
+class UAbilitySystemComponent* ATankChar::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
+void ATankChar::InitializeAttributes()
+{
+	if (IsValid(AbilitySystemComponent) && DefaultAttributeEffect)
+	{
+		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+		EffectContext.AddSourceObject(this);
+
+		FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(DefaultAttributeEffect, 1, EffectContext);
+
+		if (SpecHandle.IsValid())
+		{
+			FActiveGameplayEffectHandle ActiveHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("Initialized Attributes"));
+	}
+
+}
+
+void ATankChar::GiveAbilities()
+{
+	if (HasAuthority() && IsValid(AbilitySystemComponent))
+	{
+		for (TSubclassOf<UTTGameplayAbility>& StartingAbility : DefaultAbilities)
+		{
+			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(StartingAbility, 1, static_cast<int32>(StartingAbility.GetDefaultObject()->AbilityInputID), this));
+		}
+	}
 }
 
 void ATankChar::BeginPlay()
@@ -111,6 +179,13 @@ void ATankChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAxis("RotateTurret", this, &ATankChar::GetTurretRotation);
 	PlayerInputComponent->BindAxis("ProjectilePower", this, &ATankChar::AdjustProjectileSpeed);
 	PlayerInputComponent->BindAxis("VerticalAim", this, &ATankChar::GetMouseVerticalAim);
+
+	//Bind inputs for abilities
+	if (AbilitySystemComponent && InputComponent)
+	{
+		const FGameplayAbilityInputBinds Binds("Confirm", "Cancel", "TTAbilityInputID", static_cast<int32>(TTAbilityInputID::Confirm), static_cast<int32>(TTAbilityInputID::Cancel));
+		AbilitySystemComponent->BindAbilityActivationToInputComponent(InputComponent, Binds);
+	}
 }
 
 void ATankChar::RotateTurret(float LookAt)
@@ -298,12 +373,6 @@ void ATankChar::SetTeamColour_Server_Implementation(int Team)
 		TurretMesh->SetMaterial(0, TeamTankMat);
 
 	}
-}
-
-void ATankChar::PossessedBy(AController* NewController)
-{
-	Super::PossessedBy(NewController);
-	
 }
 
 void ATankChar::OnRep_TankTeam()
