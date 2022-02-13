@@ -25,6 +25,7 @@ class TOONTANKS_API UTTAttributeSet : public UAttributeSet
 public:
 	UTTAttributeSet();
 
+	/* Tank Health */
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_Health)
 	FGameplayAttributeData Health;
 	ATTRIBUTE_ACCESSORS(UTTAttributeSet, Health);
@@ -33,12 +34,21 @@ public:
 	UFUNCTION()
 	void OnRep_Health(const FGameplayAttributeData& OldHealth);
 
+	/* Movement Speed */
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_MovementSpeed)
 	FGameplayAttributeData MovementSpeed;
 	ATTRIBUTE_ACCESSORS(UTTAttributeSet, MovementSpeed);
 
 	UFUNCTION()
 	void OnRep_MovementSpeed(const FGameplayAttributeData& OldMovementSpeed);
+
+	/* Fire Delay for Turret */
+	UPROPERTY(BlueprintReadOnly, Category = "Turret", ReplicatedUsing = OnRep_FireDelay)
+	FGameplayAttributeData FireDelay;
+	ATTRIBUTE_ACCESSORS(UTTAttributeSet, FireDelay);
+
+	UFUNCTION()
+	void OnRep_FireDelay(const FGameplayAttributeData& OldFireDelay);
 
 private:
 

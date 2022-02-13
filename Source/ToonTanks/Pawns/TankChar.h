@@ -76,11 +76,8 @@ public:
 
 
 	float MouseFloat = 0.f;
-
-	//Turret Firing Delay
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turrets")
-	float TurretFireDelay;
-
+	
+	UPROPERTY(BlueprintReadOnly)
 	bool bCanFire = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "True"))
@@ -114,10 +111,10 @@ public:
 	/*Functions*/
 	ATankChar();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void SetFireDelay();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void ResetFireDelay();
 
 	UFUNCTION(NetMulticast, Reliable)

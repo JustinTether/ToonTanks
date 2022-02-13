@@ -65,7 +65,6 @@ ATankChar::ATankChar()
 	bReplicates = true;
 
 	TankTeam = -1;
-	TurretFireDelay = 0.5f;
 	MinProjectileSpeed = 400.f;
 	MaxProjectileSpeed = 5000.f;
 	ProjectileSpeed = MinProjectileSpeed;
@@ -267,8 +266,10 @@ void ATankChar::RotateTurret_Server_Implementation(float LookLocation)
 void ATankChar::SetFireDelay()
 {
 	bCanFire = false;
+	float FireDelay = Attributes->FireDelay.GetCurrentValue();
+
 	FTimerHandle ResetFireTimer;
-	GetWorldTimerManager().SetTimer(ResetFireTimer, this, &ATankChar::ResetFireDelay, TurretFireDelay);
+	GetWorldTimerManager().SetTimer(ResetFireTimer, this, &ATankChar::ResetFireDelay, FireDelay);
 }
 
 void ATankChar::ResetFireDelay()

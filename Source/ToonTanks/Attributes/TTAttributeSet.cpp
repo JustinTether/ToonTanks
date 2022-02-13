@@ -25,3 +25,8 @@ void UTTAttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldMovem
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UTTAttributeSet, MovementSpeed, OldMovementSpeed);
 }
+
+void UTTAttributeSet::OnRep_FireDelay(const FGameplayAttributeData& OldFireDelay)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UTTAttributeSet, MovementSpeed, OldFireDelay);
+}
