@@ -4,6 +4,9 @@
 #include "ProjectileBase.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "ToonTanks/Components/TTAbilitySystemComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "GameplayTagsModule.h"
 #include "Kismet/GameplayStatics.h"
 #include "../Pawns/TankChar.h"
 #include "../Controllers/TTPlayerController.h"
@@ -50,6 +53,15 @@ void AProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 			if (OtherActor && OtherActor != this)
 			{
 					UGameplayStatics::ApplyDamage(OtherActor, ProjectileDamage, ProjectileOwner->GetInstigatorController(), this, DamageType);
+
+					//Apply damage through the GameplayAbilitySystem instead
+					FGameplayAbilityTargetDataHandle TData;
+					TData = UAbilitySystemBlueprintLibrary::AbilityTargetDataFromActor(OtherActor);
+
+					FGameplayEventData HitEventData;
+					HitEventData.Instigator = ProjectileOwner;
+					HitEventData.TargetData = TData;
+					UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(ProjectileOwner, FGameplayTag::RequestGameplayTag(FName("Projectile.Hit")), HitEventData);
 			}
 			Destroy();
 		}

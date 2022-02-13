@@ -300,25 +300,25 @@ void ATankChar::Fire()
 		//Spawn a projectile at ProjectileSpawnPoint location and Rotation with momentum towards Rotation Vector
 		if (ProjectileClass && bCanFire)
 		{
-			//Create a new rot with altered Y? to see if the bullet fires higher
-			FRotator ProjectileRotator = ProjectileSpawnPoint->GetComponentRotation();
-			ProjectileRotator.Pitch += MouseVerticalOffset;
+			////Create a new rot with altered Y? to see if the bullet fires higher
+			//FRotator ProjectileRotator = ProjectileSpawnPoint->GetComponentRotation();
+			//ProjectileRotator.Pitch += MouseVerticalOffset;
 
-			FTransform ProjectileSpawnTransform(ProjectileRotator, ProjectileSpawnPoint->GetComponentLocation());
-			auto CustomProjectile = Cast<AProjectileBase>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, ProjectileSpawnTransform));
-			if (!IsValid(CustomProjectile))
-			{
-				UE_LOG(LogTemp, Error, TEXT("Unable to spawn deferred actor"));
-				return;
-			}
-			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->InitialSpeed = ProjectileSpeed;
+			//FTransform ProjectileSpawnTransform(ProjectileRotator, ProjectileSpawnPoint->GetComponentLocation());
+			//auto CustomProjectile = Cast<AProjectileBase>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, ProjectileSpawnTransform));
+			//if (!IsValid(CustomProjectile))
+			//{
+			//	UE_LOG(LogTemp, Error, TEXT("Unable to spawn deferred actor"));
+			//	return;
+			//}
+			//CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->InitialSpeed = ProjectileSpeed;
 
-			//@TODO Please replace this hardcoded vector with one that has it's Y element changed
-			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->SetVelocityInLocalSpace(FVector(1, 0, 0));
-			UGameplayStatics::FinishSpawningActor(CustomProjectile, ProjectileSpawnTransform);
-			CustomProjectile->SetOwner(this);
-			Fire_Server();
-			SetFireDelay();
+			////@TODO Please replace this hardcoded vector with one that has it's Y element changed
+			//CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->SetVelocityInLocalSpace(FVector(1, 0, 0));
+			//UGameplayStatics::FinishSpawningActor(CustomProjectile, ProjectileSpawnTransform);
+			//CustomProjectile->SetOwner(this);
+			//Fire_Server();
+			//SetFireDelay();
 		}//@TODO 
 	}
 }
@@ -330,7 +330,7 @@ void ATankChar::Fire_Server_Implementation()
 		//Spawn a projectile at ProjectileSpawnPoint location and Rotation with momentum towards Rotation Vector
 		if (ProjectileClass)
 		{
-			FRotator ProjectileRotator = ProjectileSpawnPoint->GetComponentRotation();
+		/*	FRotator ProjectileRotator = ProjectileSpawnPoint->GetComponentRotation();
 			ProjectileRotator.Pitch += MouseVerticalOffset;
 
 			FTransform ProjectileSpawnTransform(ProjectileSpawnPoint->GetComponentRotation(), ProjectileSpawnPoint->GetComponentLocation());
@@ -343,7 +343,7 @@ void ATankChar::Fire_Server_Implementation()
 			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->InitialSpeed = ProjectileSpeed;
 			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->SetVelocityInLocalSpace(FVector(1, 0, 0));
 			UGameplayStatics::FinishSpawningActor(CustomProjectile, ProjectileSpawnTransform);
-			CustomProjectile->SetOwner(this);
+			CustomProjectile->SetOwner(this);*/
 		}
 	}
 }
