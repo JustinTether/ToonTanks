@@ -83,9 +83,6 @@ public:
 
 	bool bCanFire = true;
 
-	//Some editor values for turn/movement speed as it's more feel based than anything
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "True"))
-	float MoveSpeed = 300.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "True"))
 	float TurnSpeed = 100.f;
 

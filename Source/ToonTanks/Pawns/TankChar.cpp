@@ -209,8 +209,10 @@ void ATankChar::GetMouseVerticalAim(float MouseY)
 
 void ATankChar::GetMoveDirection(float MoveInput)
 {
+	float MovementSpeedAttribute = Attributes->MovementSpeed.GetCurrentValue();
+
 	MovementDirection.X = FMath::Clamp(MoveInput, -1.0f, 1.0f);
-	MovementDirection.X = MovementDirection.X * GetWorld()->DeltaTimeSeconds * MoveSpeed;
+	MovementDirection.X = MovementDirection.X * GetWorld()->DeltaTimeSeconds * MovementSpeedAttribute;
 }
 
 void ATankChar::GetMoveRotation(float RotationInput)
