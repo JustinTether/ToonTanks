@@ -338,7 +338,7 @@ void AToonTanksBase::HandleGameOver(bool PlayerWon)
 
 void AToonTanksBase::ActorDied(AActor* DeadActor, AActor* Killer)
 {
-	ATTPlayerController* KillerController = Killer->GetOwner()->GetInstigatorController<ATTPlayerController>();
+	ATTPlayerController* KillerController = Cast<ATTPlayerController>(Killer->GetInstigatorController<ATTPlayerController>());
 
 	if (Cast<ATankChar>(DeadActor))
 	{
