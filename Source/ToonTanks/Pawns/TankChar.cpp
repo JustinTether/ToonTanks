@@ -103,6 +103,7 @@ void ATankChar::OnRep_PlayerState()
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	InitializeAttributes();
+	//GiveAbilities();
 
 	//Bind inputs for abilities
 	if (AbilitySystemComponent && InputComponent)

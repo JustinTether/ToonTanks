@@ -52,9 +52,7 @@ void AProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 		{
 			if (OtherActor && OtherActor != this)
 			{
-					UGameplayStatics::ApplyDamage(OtherActor, ProjectileDamage, ProjectileOwner->GetInstigatorController(), this, DamageType);
-
-					//Apply damage through the GameplayAbilitySystem instead
+					//Apply damage through the GameplayAbilitySystem
 					FGameplayAbilityTargetDataHandle TData;
 					TData = UAbilitySystemBlueprintLibrary::AbilityTargetDataFromActor(OtherActor);
 

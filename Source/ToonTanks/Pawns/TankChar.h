@@ -35,7 +35,6 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void PossessedBy(AController* NewController) override;
-	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	virtual void OnRep_PlayerState() override;
 
 
@@ -46,6 +45,8 @@ public:
 	/*Ability System*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
 	UTTAbilitySystemComponent* AbilitySystemComponent;
+
+	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	UTTAttributeSet* Attributes;
 
@@ -127,6 +128,7 @@ public:
 
 	UFUNCTION()
 	void OnRep_TankTeam();
+
 
 protected:
 
