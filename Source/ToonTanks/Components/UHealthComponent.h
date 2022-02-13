@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include <GameplayEffectTypes.h>
 #include "Components/ActorComponent.h"
 #include "UHealthComponent.generated.h"
 
@@ -17,34 +18,23 @@ class TOONTANKS_API UUHealthComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:	
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerHitDelegate);
 
 	// Sets default values for this component's properties
 	UUHealthComponent();
-	
-	UPROPERTY(BlueprintAssignable, Category = "Player")
-	FOnPlayerHitDelegate OnPlayerHit;
-
-	UFUNCTION()
-	void OnRep_HealthChanged();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, ReplicatedUsing = OnRep_HealthChanged, Category="Player")
-	float Health;
 
 	UPROPERTY(EditAnywhere)
 	float DefaultHealth;
 
-	
+	/*Reference of the last actor that dealt damage to us */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "Game Mode")
+	AActor* LastDamageDealer = nullptr;
 	
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	UFUNCTION()
-	void ApplyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
-
-
+	void CheckActorDeath(const FOnAttributeChangeData& ChangedAttribute);
 
 private:
 	

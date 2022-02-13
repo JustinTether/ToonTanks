@@ -1,16 +1,19 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
+//Project Includes
 #include "UHealthComponent.h"
+#include "ToonTanks/Pawns/TankChar.h"
+#include "ToonTanks/Components/TTAbilitySystemComponent.h"
+#include "ToonTanks/Modes/ToonTanksBase.h"
+
+//UE4 Includes
 #include "GameFramework/DamageType.h"
 #include "GameFramework/Controller.h"
-#include "../Pawns/TankBase.h"
 #include "GameFramework/DamageType.h"
+#include "GameplayEffectExtension.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
-#include "../Modes/ToonTanksBase.h"
-
 
 // Sets default values for this component's properties
 UUHealthComponent::UUHealthComponent()
@@ -28,41 +31,50 @@ void UUHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	Health = DefaultHealth;
 	GameMode = Cast<AToonTanksBase>(UGameplayStatics::GetGameMode(GetWorld()));
-	GetOwner()->OnTakeAnyDamage.AddDynamic(this, &UUHealthComponent::ApplyDamage);
+	//GetOwner()->OnTakeAnyDamage.AddDynamic(this, &UUHealthComponent::ApplyDamage);
+	//Bind to OnAttributedChanged, if the value is 0, call ActorDied
+	ATankChar* PlayerPawn;
+	PlayerPawn = Cast<ATankChar>(GetOwner());
+
+	if (!IsValid(PlayerPawn))
+	{
+		return;
+	}
+	
+	UTTAbilitySystemComponent* PlayerAbilityComponent;
+	PlayerAbilityComponent = Cast<UTTAbilitySystemComponent>(PlayerPawn->GetAbilitySystemComponent());
+
+	PlayerAbilityComponent->GetGameplayAttributeValueChangeDelegate(PlayerPawn->Attributes->GetHealthAttribute()).AddUObject(this, &UUHealthComponent::CheckActorDeath);
 }
 
 void UUHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	DOREPLIFETIME(UUHealthComponent, Health);
+	DOREPLIFETIME(UUHealthComponent, LastDamageDealer);
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
-void UUHealthComponent::OnRep_HealthChanged()
-{
-	UE_LOG(LogTemp, Warning, TEXT("OnRep Health changed new health: %f"), Health);
-	OnPlayerHit.Broadcast();
-}
-
-void UUHealthComponent::ApplyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
+void UUHealthComponent::CheckActorDeath(const FOnAttributeChangeData& ChangedAttribute)
 {
 	if (GetOwner()->HasAuthority())
 	{
-		if (Damage != 0)
+		float NewHealth = ChangedAttribute.NewValue;
+		bool bIsDead = NewHealth <= 0;
+
+		LastDamageDealer = ChangedAttribute.GEModData->EffectSpec.GetContext().GetInstigator();
+
+		if (!bIsDead)
 		{
-			Health = FMath::Clamp(Health - Damage, 0.0f, DefaultHealth);
-			UE_LOG(LogTemp, Error, TEXT("Calling UI NOTIFY FROM HEALTH COMPONENT: %s"), *GetOwner()->GetName());
-			OnPlayerHit.Broadcast();
-			if (Health <= 0)
-			{
-				if (GameMode)
-				{
-					GameMode->ActorDied(GetOwner(), DamageCauser);
-				}
-			}
+			return;
+		}
+
+		if (GameMode)
+		{
+			GameMode->ActorDied(GetOwner(), LastDamageDealer);
 		}
 	}
-		
+
+
 }
+
 
