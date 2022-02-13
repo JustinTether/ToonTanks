@@ -35,10 +35,6 @@ void UHealthWidget::NativeConstruct()
 	}
 }
 
-void UHealthWidget::RemoveWidget()
-{
-	RemoveFromParent();
-}
 
 void UHealthWidget::SetInitialValue(float InitialValue)
 {
@@ -55,9 +51,4 @@ void UHealthWidget::UpdateHealthPercent(const FOnAttributeChangeData& ChangedAtt
 	HealthProgressBar->SetPercent(CurrentHealthPercent / 100);
 
 	InvalidateLayoutAndVolatility();
-
-	if (ChangedAttribute.NewValue <= 0)
-	{
-		RemoveWidget();
-	}
 }

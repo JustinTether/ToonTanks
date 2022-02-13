@@ -32,8 +32,6 @@ public:
 
 	void SetInitialValue(float InitialValue);
 
-	void RemoveWidget();
-
 private:
 
 protected:
