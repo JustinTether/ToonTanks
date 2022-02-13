@@ -5,6 +5,7 @@
 #include "../Components/UHealthComponent.h"
 #include "../Pawns/TankChar.h"
 #include "Components/TextBlock.h"
+#include "ToonTanks/Components/TTAbilitySystemComponent.h"
 #include "Components/ProgressBar.h"
 
 DEFINE_LOG_CATEGORY(TTLogHealthWidget);
@@ -21,35 +22,42 @@ void UHealthWidget::NativeConstruct()
 		UE_LOG(TTLogHealthWidget, Error, TEXT("Unable to get player pawn"));
 	}
 
-	UUHealthComponent* PlayerHealthComponent = Cast<UUHealthComponent>(PlayerPawn->GetComponentByClass(UUHealthComponent::StaticClass()));
-	if (!IsValid(PlayerHealthComponent))
-	{
-		UE_LOG(TTLogHealthWidget, Error, TEXT("Unable to get Health Component reference"));
-	}
+	//Instead of binding to the OnHit let's bind to the GameplayAttributeValueChangeDelegate
+	UTTAbilitySystemComponent* PlayerAbilitySystem;
 
-	PlayerHealthComponent->OnPlayerHit.AddUniqueDynamic(this, &UHealthWidget::UpdateHealthPercent);
-	UpdateHealthPercent();
+	PlayerAbilitySystem = Cast<UTTAbilitySystemComponent>(PlayerPawn->GetComponentByClass(UTTAbilitySystemComponent::StaticClass()));
+
+	if (IsValid(PlayerAbilitySystem))
+	{
+		PlayerAbilitySystem->GetGameplayAttributeValueChangeDelegate(PlayerPawn->Attributes->GetHealthAttribute()).AddUObject(this, &UHealthWidget::UpdateHealthPercent);
+		float StartingHealth = PlayerPawn->Attributes->Health.GetCurrentValue();
+		SetInitialValue(StartingHealth);
+	}
 }
 
-void UHealthWidget::UpdateHealthPercent()
+void UHealthWidget::RemoveWidget()
 {
+	RemoveFromParent();
+}
 
-	ATankChar* PlayerPawn = GetOwningPlayerPawn<ATankChar>();
-	if (!IsValid(PlayerPawn))
-	{
-		UE_LOG(TTLogHealthWidget, Error, TEXT("Unable to get player pawn"));
-	}
+void UHealthWidget::SetInitialValue(float InitialValue)
+{
+	HealthNumber->SetText(FText::AsNumber(InitialValue));
+	HealthProgressBar->SetPercent(InitialValue / 100);
 
-	UUHealthComponent* PlayerHealthComponent = Cast<UUHealthComponent>(PlayerPawn->GetComponentByClass(UUHealthComponent::StaticClass()));
-	if (!IsValid(PlayerHealthComponent))
-	{
-		UE_LOG(TTLogHealthWidget, Error, TEXT("Unable to get Health Component reference"));
-	}
+	InvalidateLayoutAndVolatility();
+}
 
-	float CurrentHealthPercent = PlayerHealthComponent->Health;
-
+void UHealthWidget::UpdateHealthPercent(const FOnAttributeChangeData& ChangedAttribute)
+{
+	float CurrentHealthPercent = ChangedAttribute.NewValue;
 	HealthNumber->SetText(FText::AsNumber(CurrentHealthPercent));
 	HealthProgressBar->SetPercent(CurrentHealthPercent / 100);
 
 	InvalidateLayoutAndVolatility();
+
+	if (ChangedAttribute.NewValue <= 0)
+	{
+		RemoveWidget();
+	}
 }
