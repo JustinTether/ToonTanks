@@ -131,15 +131,10 @@ protected:
 
 	/*Projectile class, and projectile spawn point component*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "True"))
-	USceneComponent* ProjectileSpawnPoint = nullptr; //Projectile spawn point???
+	USceneComponent* ProjectileSpawnPoint = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ProjectileType", meta = (AllowPrivateAccess = "True"))
 	TSubclassOf<AProjectileBase> ProjectileClass;
-
-	/*Fire function and it's server-side implementation*/
-	void Fire();
-
-	UFUNCTION(BlueprintCallable, Server, Reliable)
-	void Fire_Server();
 
 	/*Turret rotation, and it's server-side implementation*/
 	UFUNCTION(BlueprintCallable, Server, Reliable)
