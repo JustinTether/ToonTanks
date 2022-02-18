@@ -56,7 +56,4 @@ protected:
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpuse, const FHitResult& Hit);
 
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
 };
