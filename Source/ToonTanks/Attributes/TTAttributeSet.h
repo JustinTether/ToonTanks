@@ -50,6 +50,15 @@ public:
 	UFUNCTION()
 	void OnRep_FireDelay(const FGameplayAttributeData& OldFireDelay);
 
+	/* Projectile Speed */
+	UPROPERTY(BlueprintReadOnly, Category = "Turret", ReplicatedUsing = OnRep_ProjectileSpeed)
+	FGameplayAttributeData ProjectileSpeed;
+
+	ATTRIBUTE_ACCESSORS(UTTAttributeSet, ProjectileSpeed);
+
+	UFUNCTION()
+		void OnRep_ProjectileSpeed(const FGameplayAttributeData& OldProjectileSpeed);
+
 private:
 
 

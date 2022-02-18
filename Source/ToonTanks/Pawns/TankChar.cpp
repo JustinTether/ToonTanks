@@ -279,12 +279,14 @@ void ATankChar::ResetFireDelay()
 
 void ATankChar::AdjustProjectileSpeed(float DesiredAdjustment)
 {
-	if (IsLocallyControlled() || GetLocalRole() == ROLE_Authority)
-	{
-		float AdjustedInput = (DesiredAdjustment * 100);
-		ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
-		AdjustProjectileSpeed_Server(DesiredAdjustment);
-	}
+	//if (IsLocallyControlled() || GetLocalRole() == ROLE_Authority)
+	//{
+	//	float AdjustedInput = (DesiredAdjustment * 100);
+	//	ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
+	//	AdjustProjectileSpeed_Server(DesiredAdjustment);
+	//}
+
+	AdjustProjectileSpeed_Server(DesiredAdjustment);
 
 }
 
@@ -292,8 +294,13 @@ void ATankChar::AdjustProjectileSpeed_Server_Implementation(float DesiredAdjustm
 {
 	if (!IsLocallyControlled())
 	{
+		/*float AdjustedInput = (DesiredAdjustment * 100);
+		ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);*/
+		
 		float AdjustedInput = (DesiredAdjustment * 100);
-		ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
+		float NewProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
+
+		Attributes->ProjectileSpeed.SetCurrentValue(NewProjectileSpeed);
 	}
 }
 
