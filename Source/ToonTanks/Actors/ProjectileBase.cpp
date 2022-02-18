@@ -46,9 +46,23 @@ class UAbilitySystemComponent* AProjectileBase::GetAbilitySystemComponent() cons
 
 void AProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpuse, const FHitResult& Hit)
 {
+	if (!DefaultDamageEffect)
+	{
+		return;
+	}
+
 	AActor* ProjectileOwner = GetOwner();
 
 	if (!IsValid(ProjectileOwner))
+	{
+		Destroy();
+		return;
+	}
+
+	ATankChar* TankToHit;
+	TankToHit = Cast<ATankChar>(OtherActor);
+
+	if (!IsValid(TankToHit))
 	{
 		Destroy();
 		return;
@@ -60,27 +74,7 @@ void AProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 		return;
 	}
 
-	if (OtherActor == this)
-	{
-		return;
-	}
-
-	if (!DefaultDamageEffect)
-	{
-		Destroy();
-		return;
-	}
-
 	//Grab GameplayAbilitySystem of actor and apply GameplayEffect
-	ATankChar* TankToHit;
-	TankToHit = Cast<ATankChar>(OtherActor);
-
-	if (!IsValid(TankToHit))
-	{
-		Destroy();
-		return;
-	}
-
 	UTTAbilitySystemComponent* TankAbilitySystem;
 	TankAbilitySystem = Cast<UTTAbilitySystemComponent>(TankToHit->GetComponentByClass(UTTAbilitySystemComponent::StaticClass()));
 
