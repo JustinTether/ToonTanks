@@ -25,6 +25,10 @@ AProjectileBase::AProjectileBase()
 
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Projectile Movement Component"));
 	InitialLifeSpan = 3.f;
+
+	AbilitySystemComponent = CreateDefaultSubobject<UTTAbilitySystemComponent>(TEXT("Ability System Component"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 }
 
 
@@ -35,37 +39,69 @@ void AProjectileBase::BeginPlay()
 
 }
 
-// Called every frame
-void AProjectileBase::Tick(float DeltaTime)
+class UAbilitySystemComponent* AProjectileBase::GetAbilitySystemComponent() const
 {
-	Super::Tick(DeltaTime);
-
+	return AbilitySystemComponent;
 }
 
 void AProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpuse, const FHitResult& Hit)
 {
 	AActor* ProjectileOwner = GetOwner();
 
-	if (OtherActor != ProjectileOwner)
+	if (!IsValid(ProjectileOwner))
 	{
-		if (IsValid(ProjectileOwner))
-		{
-			if (OtherActor && OtherActor != this)
-			{
-					//Apply damage through the GameplayAbilitySystem
-					FGameplayAbilityTargetDataHandle TData;
-					TData = UAbilitySystemBlueprintLibrary::AbilityTargetDataFromActor(OtherActor);
-
-					FGameplayEventData HitEventData;
-					HitEventData.Instigator = ProjectileOwner;
-					HitEventData.TargetData = TData;
-					UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(ProjectileOwner, FGameplayTag::RequestGameplayTag(FName("Projectile.Hit")), HitEventData);
-			}
-			Destroy();
-		}
+		Destroy();
+		return;
 	}
-	//If the projectile came from the owner just destroy the projectile
-	else Destroy();
-	
+
+	if (OtherActor == ProjectileOwner)
+	{
+		Destroy();
+		return;
+	}
+
+	if (OtherActor == this)
+	{
+		return;
+	}
+
+	if (!DefaultDamageEffect)
+	{
+		Destroy();
+		return;
+	}
+
+	//Grab GameplayAbilitySystem of actor and apply GameplayEffect
+	ATankChar* TankToHit;
+	TankToHit = Cast<ATankChar>(OtherActor);
+
+	if (!IsValid(TankToHit))
+	{
+		Destroy();
+		return;
+	}
+
+	UTTAbilitySystemComponent* TankAbilitySystem;
+	TankAbilitySystem = Cast<UTTAbilitySystemComponent>(TankToHit->GetComponentByClass(UTTAbilitySystemComponent::StaticClass()));
+
+	if (!IsValid(TankAbilitySystem))
+	{
+		Destroy();
+		return;
+	}
+
+	FGameplayEffectContextHandle EffectContext = TankAbilitySystem->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+
+	FGameplayEffectSpecHandle EffectHandle = AbilitySystemComponent->MakeOutgoingSpec(DefaultDamageEffect, 1, EffectContext);
+
+	if (!EffectHandle.IsValid())
+	{
+		Destroy();
+		return;
+	}
+
+	FActiveGameplayEffectHandle ActiveHandle = TankAbilitySystem->ApplyGameplayEffectSpecToSelf(*EffectHandle.Data.Get());
+	Destroy();
 }
 
