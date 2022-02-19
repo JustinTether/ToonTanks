@@ -84,7 +84,6 @@ void ATankChar::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ATankChar, ProjectileSpeed);
 	DOREPLIFETIME(ATankChar, MouseVerticalOffset);
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
 }
 
 void ATankChar::PossessedBy(AController* NewController)
@@ -279,29 +278,29 @@ void ATankChar::ResetFireDelay()
 
 void ATankChar::AdjustProjectileSpeed(float DesiredAdjustment)
 {
-	//if (IsLocallyControlled() || GetLocalRole() == ROLE_Authority)
-	//{
-	//	float AdjustedInput = (DesiredAdjustment * 100);
-	//	ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
-	//	AdjustProjectileSpeed_Server(DesiredAdjustment);
-	//}
-
-	AdjustProjectileSpeed_Server(DesiredAdjustment);
-
+	if (DesiredAdjustment > 0.1 || DesiredAdjustment < -0.1)
+	{
+		AdjustProjectileSpeed_Server(DesiredAdjustment);
+	}
 }
 
 void ATankChar::AdjustProjectileSpeed_Server_Implementation(float DesiredAdjustment)
 {
-	if (!IsLocallyControlled())
-	{
-		/*float AdjustedInput = (DesiredAdjustment * 100);
-		ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);*/
-		
 		float AdjustedInput = (DesiredAdjustment * 100);
 		float NewProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
+		UE_LOG(LogTemp, Error, TEXT("[SERVER] Current new ProjectileSpeed: %f"), NewProjectileSpeed);
 
-		Attributes->ProjectileSpeed.SetCurrentValue(NewProjectileSpeed);
-	}
+		//Create runtime GE to apply ProjectileSpeed override
+		UGameplayEffect* ProjectileSpeedGE = NewObject<UGameplayEffect>(GetTransientPackage(), TEXT("Projectile Speed Override"));
+		ProjectileSpeedGE->DurationPolicy = EGameplayEffectDurationType::Instant;
+		ProjectileSpeedGE->Modifiers.SetNum(1);
+
+		FGameplayModifierInfo& ModifierInfo = ProjectileSpeedGE->Modifiers[0];
+		ModifierInfo.ModifierMagnitude = FScalableFloat(AdjustedInput);
+		ModifierInfo.ModifierOp = EGameplayModOp::Additive;
+		ModifierInfo.Attribute = Attributes->GetProjectileSpeedAttribute();
+
+		AbilitySystemComponent->ApplyGameplayEffectToSelf(ProjectileSpeedGE, 1.0, AbilitySystemComponent->MakeEffectContext());
 }
 
 /* Multicast function for setting dynamic material based on TeamID */
