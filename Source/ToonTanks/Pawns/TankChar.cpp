@@ -1,25 +1,28 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
+//Project Includes
 #include "TankChar.h"
+#include "ToonTanks/Actors/ProjectileBase.h"
+#include "ToonTanks/Controllers/TTPlayerController.h"
+#include "ToonTanks/Components/TTAbilitySystemComponent.h"
+#include "ToonTanks/Abilities/TTGameplayAbility.h"
+
+//UE Includes
 #include "Components/SceneComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "../Actors/ProjectileBase.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
-#include "../Controllers/TTPlayerController.h"
 #include "Net/UnrealNetwork.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/PlayerController.h"
 #include "TimerManager.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-
 
 
 // Sets default values
@@ -53,10 +56,15 @@ ATankChar::ATankChar()
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Player Controlled Camera"));
 	PlayerCamera->SetupAttachment(CameraSpringArm);
 
+	AbilitySystemComponent = CreateDefaultSubobject<UTTAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+
+	Attributes = CreateDefaultSubobject<UTTAttributeSet>(TEXT("Ability Attributes"));
+
 	bReplicates = true;
 
 	TankTeam = -1;
-	TurretFireDelay = 0.5f;
 	MinProjectileSpeed = 400.f;
 	MaxProjectileSpeed = 5000.f;
 	ProjectileSpeed = MinProjectileSpeed;
@@ -76,7 +84,66 @@ void ATankChar::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ATankChar, ProjectileSpeed);
 	DOREPLIFETIME(ATankChar, MouseVerticalOffset);
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
 
+void ATankChar::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
+	InitializeAttributes();
+	GiveAbilities();
+}
+
+void ATankChar::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	InitializeAttributes();
+	//GiveAbilities();
+
+	//Bind inputs for abilities
+	if (AbilitySystemComponent && InputComponent)
+	{
+		const FGameplayAbilityInputBinds Binds("Confirm", "Cancel", "TTAbilityInputID", static_cast<int32>(TTAbilityInputID::Confirm), static_cast<int32>(TTAbilityInputID::Cancel));
+		AbilitySystemComponent->BindAbilityActivationToInputComponent(InputComponent, Binds);
+	}
+}
+
+class UAbilitySystemComponent* ATankChar::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
+void ATankChar::InitializeAttributes()
+{
+	if (IsValid(AbilitySystemComponent) && DefaultAttributeEffect)
+	{
+		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+		EffectContext.AddSourceObject(this);
+
+		FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(DefaultAttributeEffect, 1, EffectContext);
+
+		if (SpecHandle.IsValid())
+		{
+			FActiveGameplayEffectHandle ActiveHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("Initialized Attributes"));
+	}
+
+}
+
+void ATankChar::GiveAbilities()
+{
+	if (HasAuthority() && IsValid(AbilitySystemComponent))
+	{
+		for (TSubclassOf<UTTGameplayAbility>& StartingAbility : DefaultAbilities)
+		{
+			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(StartingAbility, 1, static_cast<int32>(StartingAbility.GetDefaultObject()->AbilityInputID), this));
+		}
+	}
 }
 
 void ATankChar::BeginPlay()
@@ -107,10 +174,17 @@ void ATankChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	PlayerInputComponent->BindAxis("MoveForward", this, &ATankChar::GetMoveDirection);
 	PlayerInputComponent->BindAxis("Turn", this, &ATankChar::GetMoveRotation);
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ATankChar::Fire);
+	//PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ATankChar::Fire);
 	PlayerInputComponent->BindAxis("RotateTurret", this, &ATankChar::GetTurretRotation);
 	PlayerInputComponent->BindAxis("ProjectilePower", this, &ATankChar::AdjustProjectileSpeed);
 	PlayerInputComponent->BindAxis("VerticalAim", this, &ATankChar::GetMouseVerticalAim);
+
+	//Bind inputs for abilities
+	if (AbilitySystemComponent && InputComponent)
+	{
+		const FGameplayAbilityInputBinds Binds("Confirm", "Cancel", "TTAbilityInputID", static_cast<int32>(TTAbilityInputID::Confirm), static_cast<int32>(TTAbilityInputID::Cancel));
+		AbilitySystemComponent->BindAbilityActivationToInputComponent(InputComponent, Binds);
+	}
 }
 
 void ATankChar::RotateTurret(float LookAt)
@@ -133,8 +207,10 @@ void ATankChar::GetMouseVerticalAim(float MouseY)
 
 void ATankChar::GetMoveDirection(float MoveInput)
 {
+	float MovementSpeedAttribute = Attributes->MovementSpeed.GetCurrentValue();
+
 	MovementDirection.X = FMath::Clamp(MoveInput, -1.0f, 1.0f);
-	MovementDirection.X = MovementDirection.X * GetWorld()->DeltaTimeSeconds * MoveSpeed;
+	MovementDirection.X = MovementDirection.X * GetWorld()->DeltaTimeSeconds * MovementSpeedAttribute;
 }
 
 void ATankChar::GetMoveRotation(float RotationInput)
@@ -189,8 +265,10 @@ void ATankChar::RotateTurret_Server_Implementation(float LookLocation)
 void ATankChar::SetFireDelay()
 {
 	bCanFire = false;
+	float FireDelay = Attributes->FireDelay.GetCurrentValue();
+
 	FTimerHandle ResetFireTimer;
-	GetWorldTimerManager().SetTimer(ResetFireTimer, this, &ATankChar::ResetFireDelay, TurretFireDelay);
+	GetWorldTimerManager().SetTimer(ResetFireTimer, this, &ATankChar::ResetFireDelay, FireDelay);
 }
 
 void ATankChar::ResetFireDelay()
@@ -200,77 +278,29 @@ void ATankChar::ResetFireDelay()
 
 void ATankChar::AdjustProjectileSpeed(float DesiredAdjustment)
 {
-	if (IsLocallyControlled() || GetLocalRole() == ROLE_Authority)
+	if (DesiredAdjustment > 0.1 || DesiredAdjustment < -0.1)
 	{
-		float AdjustedInput = (DesiredAdjustment * 100);
-		ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
 		AdjustProjectileSpeed_Server(DesiredAdjustment);
 	}
-
 }
 
 void ATankChar::AdjustProjectileSpeed_Server_Implementation(float DesiredAdjustment)
 {
-	if (!IsLocallyControlled())
-	{
 		float AdjustedInput = (DesiredAdjustment * 100);
-		ProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
-	}
-}
+		float NewProjectileSpeed = FMath::Clamp(ProjectileSpeed + AdjustedInput, MinProjectileSpeed, MaxProjectileSpeed);
+		UE_LOG(LogTemp, Error, TEXT("[SERVER] Current new ProjectileSpeed: %f"), NewProjectileSpeed);
 
-void ATankChar::Fire()
-{
-	if (IsLocallyControlled() || GetLocalRole() == ROLE_Authority)
-	{
-		//Spawn a projectile at ProjectileSpawnPoint location and Rotation with momentum towards Rotation Vector
-		if (ProjectileClass && bCanFire)
-		{
-			//Create a new rot with altered Y? to see if the bullet fires higher
-			FRotator ProjectileRotator = ProjectileSpawnPoint->GetComponentRotation();
-			ProjectileRotator.Pitch += MouseVerticalOffset;
+		//Create runtime GE to apply ProjectileSpeed override
+		UGameplayEffect* ProjectileSpeedGE = NewObject<UGameplayEffect>(GetTransientPackage(), TEXT("Projectile Speed Override"));
+		ProjectileSpeedGE->DurationPolicy = EGameplayEffectDurationType::Instant;
+		ProjectileSpeedGE->Modifiers.SetNum(1);
 
-			FTransform ProjectileSpawnTransform(ProjectileRotator, ProjectileSpawnPoint->GetComponentLocation());
-			auto CustomProjectile = Cast<AProjectileBase>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, ProjectileSpawnTransform));
-			if (!IsValid(CustomProjectile))
-			{
-				UE_LOG(LogTemp, Error, TEXT("Unable to spawn deferred actor"));
-				return;
-			}
-			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->InitialSpeed = ProjectileSpeed;
+		FGameplayModifierInfo& ModifierInfo = ProjectileSpeedGE->Modifiers[0];
+		ModifierInfo.ModifierMagnitude = FScalableFloat(AdjustedInput);
+		ModifierInfo.ModifierOp = EGameplayModOp::Additive;
+		ModifierInfo.Attribute = Attributes->GetProjectileSpeedAttribute();
 
-			//@TODO Please replace this hardcoded vector with one that has it's Y element changed
-			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->SetVelocityInLocalSpace(FVector(1, 0, 0));
-			UGameplayStatics::FinishSpawningActor(CustomProjectile, ProjectileSpawnTransform);
-			CustomProjectile->SetOwner(this);
-			Fire_Server();
-			SetFireDelay();
-		}//@TODO 
-	}
-}
-
-void ATankChar::Fire_Server_Implementation()
-{
-	if (!IsLocallyControlled())
-	{
-		//Spawn a projectile at ProjectileSpawnPoint location and Rotation with momentum towards Rotation Vector
-		if (ProjectileClass)
-		{
-			FRotator ProjectileRotator = ProjectileSpawnPoint->GetComponentRotation();
-			ProjectileRotator.Pitch += MouseVerticalOffset;
-
-			FTransform ProjectileSpawnTransform(ProjectileSpawnPoint->GetComponentRotation(), ProjectileSpawnPoint->GetComponentLocation());
-			auto CustomProjectile = Cast<AProjectileBase>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, ProjectileSpawnTransform));
-			if (!IsValid(CustomProjectile))
-			{
-				UE_LOG(LogTemp, Error, TEXT("Unable to spawn deferred actor"));
-				return;
-			}
-			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->InitialSpeed = ProjectileSpeed;
-			CustomProjectile->FindComponentByClass<UProjectileMovementComponent>()->SetVelocityInLocalSpace(FVector(1, 0, 0));
-			UGameplayStatics::FinishSpawningActor(CustomProjectile, ProjectileSpawnTransform);
-			CustomProjectile->SetOwner(this);
-		}
-	}
+		AbilitySystemComponent->ApplyGameplayEffectToSelf(ProjectileSpeedGE, 1.0, AbilitySystemComponent->MakeEffectContext());
 }
 
 /* Multicast function for setting dynamic material based on TeamID */
@@ -298,12 +328,6 @@ void ATankChar::SetTeamColour_Server_Implementation(int Team)
 		TurretMesh->SetMaterial(0, TeamTankMat);
 
 	}
-}
-
-void ATankChar::PossessedBy(AController* NewController)
-{
-	Super::PossessedBy(NewController);
-	
 }
 
 void ATankChar::OnRep_TankTeam()

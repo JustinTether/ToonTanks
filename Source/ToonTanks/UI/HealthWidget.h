@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include <GameplayEffectTypes.h>
 #include "HealthWidget.generated.h"
 
 /**
@@ -27,9 +28,9 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* HealthProgressBar;
 
-	UFUNCTION()
-	void UpdateHealthPercent();
+	void UpdateHealthPercent(const FOnAttributeChangeData& ChangedAttribute);
 
+	void SetInitialValue(float InitialValue);
 
 private:
 

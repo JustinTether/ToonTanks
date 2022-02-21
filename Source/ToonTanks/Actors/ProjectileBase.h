@@ -4,22 +4,35 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "AbilitySystemInterface.h"
+#include "ToonTanks/Attributes/TTAttributeSet.h"
+#include "ToonTanks/Abilities/TTGameplayAbility.h"
+#include <GameplayEffectTypes.h>
 #include "ProjectileBase.generated.h"
 
 class UProjectileMovementComponent;
 
 
 UCLASS()
-class TOONTANKS_API AProjectileBase : public AActor
+class TOONTANKS_API AProjectileBase : public AActor, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
 
 private:
-	
+
 public:	
 	// Sets default values for this actor's properties
 	AProjectileBase();
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Abilities")
+	TSubclassOf<class UGameplayEffect> DefaultDamageEffect;
+
+	/*Ability System*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
+	UTTAbilitySystemComponent* AbilitySystemComponent = nullptr;
+
+	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Move", meta = (AllowPrivateAccess = "true"))
 	float ProjectileSpeed = 1000;
@@ -43,7 +56,4 @@ protected:
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpuse, const FHitResult& Hit);
 
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
 };

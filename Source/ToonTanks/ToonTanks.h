@@ -5,3 +5,12 @@
 #include "CoreMinimal.h"
 #include "Net/UnrealNetwork.h"
 #include "Online.h"
+
+UENUM(BlueprintType)
+enum class TTAbilityInputID : uint8
+{
+	None,
+	Confirm,
+	Cancel,
+	Fire,
+};
