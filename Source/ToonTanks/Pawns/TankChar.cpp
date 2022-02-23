@@ -38,7 +38,7 @@ ATankChar::ATankChar()
 	//BaseMesh->SetSimulatePhysics(true);
 
 	//Create the movement component
-	//BaseMovementComponent = CreateDefaultSubobject<UCharacterMovementComponent>(TEXT("Tank MovementComponent"));
+	BaseMovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
 
 	//Create the turret mesh component, attach it to the base mesh (So they follow eachother)
 	TurretMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Turret Mesh"));
