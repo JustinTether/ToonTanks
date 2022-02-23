@@ -20,6 +20,7 @@ ATTAbilityPickup::ATTAbilityPickup()
 	RotatingMovementComponent->bAutoActivate = true;
 	SetPickupState(TTPickupState::ACTIVE);
 	RechargeTimer = 25.0f;
+	EffectDuration = 10.0f;
 }
 
 void ATTAbilityPickup::OnHit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -54,7 +55,8 @@ void ATTAbilityPickup::OnHit(UPrimitiveComponent* OverlappedComp, AActor* OtherA
 	{
 		return;
 	}
-	const UGameplayEffect* AppliedGE = PickupEffect.GetDefaultObject();
+	UGameplayEffect* AppliedGE = PickupEffect.GetDefaultObject();
+	AppliedGE->DurationMagnitude = FScalableFloat(EffectDuration);
 
 	
 	TankAbilitySystem->ApplyGameplayEffectToSelf(AppliedGE, 1.0f, TankAbilitySystem->MakeEffectContext());

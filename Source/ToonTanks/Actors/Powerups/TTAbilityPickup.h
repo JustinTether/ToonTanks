@@ -32,6 +32,10 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	float RechargeTimer;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	float EffectDuration;
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "True"))
 	UCapsuleComponent* CapsuleComponent = nullptr;
